@@ -1,0 +1,30 @@
+# Image de base avec Playwright
+FROM mcr.microsoft.com/playwright:v1.40.0-focal
+
+# Définir le répertoire de travail
+WORKDIR /app
+
+# Copier les fichiers de dépendances Playwright
+COPY mon-projet-playwright/package*.json ./
+
+# Installer les dépendances Playwright
+RUN npm ci --only=production
+
+# Installer les navigateurs Playwright
+RUN npx playwright install chromium
+RUN npx playwright install-deps chromium
+
+# Copier le code Playwright
+COPY mon-projet-playwright/ .
+
+# Créer un utilisateur non-root
+RUN groupadd -r playwright && useradd -r -g playwright playwright
+RUN chown -R playwright:playwright /app
+USER playwright
+
+# Variables d'environnement
+ENV NODE_ENV=production
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# Commande par défaut
+CMD ["node", "test.js"] 

@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # Service principal (serveur web + base de données)
+  fifa-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fifa-web-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      # Volume pour persister la base de données
+      - fifa_data:/app/data
+      # Volume pour les logs
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Service Playwright (optionnel, pour l'automatisation)
+  fifa-playwright:
+    build:
+      context: .
+      dockerfile: Dockerfile.playwright
+    container_name: fifa-playwright
+    environment:
+      - NODE_ENV=production
+      - SERVER_URL=http://fifa-app:3000
+    volumes:
+      # Volume pour partager les données avec l'app principale
+      - fifa_data:/app/data
+      # Volume pour les captures d'écran
+      - ./screenshots:/app/screenshots
+    depends_on:
+      fifa-app:
+        condition: service_healthy
+    restart: "no"  # Ne redémarre pas automatiquement
+    profiles:
+      - automation  # Service optionnel
+
+  # Service de gestion de base de données (optionnel)
+  fifa-db-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fifa-db-manager
+    command: ["node", "db-manager.js"]
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - fifa_data:/app/data
+    depends_on:
+      - fifa-app
+    restart: "no"
+    profiles:
+      - management  # Service optionnel
+
+volumes:
+  fifa_data:
+    driver: local 

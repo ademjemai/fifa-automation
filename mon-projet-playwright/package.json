@@ -1,0 +1,18 @@
+{
+  "name": "fifa-playwright",
+  "version": "1.0.0",
+  "description": "Automatisation Playwright pour FIFA",
+  "main": "test.js",
+  "scripts": {
+    "test": "node test.js",
+    "start": "node test.js"
+  },
+  "keywords": [
+    "playwright",
+    "automation",
+    "fifa",
+    "testing"
+  ],
+  "author": "FIFA Automation",
+  "license": "MIT"
+}

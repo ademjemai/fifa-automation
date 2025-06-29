@@ -1,0 +1,55 @@
+# Dépendances
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Fichiers de développement
+.git/
+.gitignore
+README.md
+Dockerfile*
+docker-compose.yml
+.dockerignore
+
+# Fichiers de test
+test-*.js
+*.test.js
+*.spec.js
+
+# Fichiers temporaires
+*.tmp
+*.temp
+temp_password.txt
+
+# Logs
+logs/
+*.log
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Fichiers IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Fichiers de build
+dist/
+build/
+
+# Fichiers de cache
+.cache/
+.parcel-cache/
+
+# Fichiers de sauvegarde
+*.bak
+*.backup
+
+# Fichiers de données (seront dans des volumes)
+*.db
+*.sqlite
+*.sqlite3
+security_code.txt 

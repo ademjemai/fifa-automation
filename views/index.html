@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Connexion EA FC25 Automatique</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 40px; }
+    form { background: #fff; padding: 20px; border-radius: 8px; max-width: 400px; margin: auto; box-shadow: 0 2px 8px #ccc; }
+    input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 4px; border: 1px solid #ccc; }
+    button { background: #007bff; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+  </style>
+</head>
+<body>
+  <h2>Connexion automatique EA FC25</h2>
+  <form id="loginForm" method="POST" action="/login">
+    <label>Email EA :</label>
+    <input type="email" name="email" required>
+    <label>Mot de passe EA :</label>
+    <input type="password" name="password" required>
+    <button type="submit">Se connecter</button>
+  </form>
+  <form id="codeForm" method="POST" action="/code" style="display:none;">
+    <label>Code de sécurité EA :</label>
+    <input type="text" name="securityCode" required>
+    <button type="submit">Valider le code</button>
+  </form>
+  <script>
+    document.getElementById('loginForm').onsubmit = async function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const data = new URLSearchParams(new FormData(form));
+      const res = await fetch('/login', { method: 'POST', body: data });
+      const text = await res.text();
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('codeForm').style.display = 'block';
+      // Optionnel : afficher un message d'attente
+      document.body.insertAdjacentHTML('beforeend', '<p>Veuillez entrer le code de sécurité reçu par email.</p>');
+    };
+  </script>
+</body>
+</html> 
