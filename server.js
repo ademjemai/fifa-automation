@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const db = require('./database');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Variables globales pour stocker les données (comme avant)
 let currentSecurityCode = '';
